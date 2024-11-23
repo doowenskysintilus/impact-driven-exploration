@@ -25,3 +25,7 @@ _build/
 .env
 .venv
 venv
+
+
+#
+*.mp3.asd

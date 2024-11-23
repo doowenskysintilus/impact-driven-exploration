@@ -20,8 +20,16 @@ try:
 except Exception:  # nosec
     pass
 
-
 def register_minigrid_envs():
+
+    # *** NEW *** SOUND ENV
+    register(
+        id="MiniGrid-FetchEnvSoundS8N3-v0",
+        entry_point="minigrid.envs:FetchEnvSound",
+        kwargs={"size" : 8, "numObjs" : 3},
+    )   
+
+
     # BlockedUnlockPickup
     # ----------------------------------------
 
@@ -1133,3 +1141,6 @@ def register_minigrid_envs():
         id="BabyAI-BossLevelNoUnlock-v0",
         entry_point="minigrid.envs.babyai:BossLevelNoUnlock",
     )
+
+print("Registering Envs")
+register_minigrid_envs()

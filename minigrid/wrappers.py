@@ -400,10 +400,11 @@ class FullyObsWrapper(ObservationWrapper):
     def __init__(self, env):
         super().__init__(env)
 
+        env = env.unwrapped
         new_image_space = spaces.Box(
             low=0,
             high=255,
-            shape=(self.env.width, self.env.height, 3),  # number of cells
+            shape=(env.width, env.height, 3),  # number of cells
             dtype="uint8",
         )
 
