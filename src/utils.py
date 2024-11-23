@@ -22,11 +22,11 @@ from src import atari_wrappers as atari_wrappers
 
 from minigrid import wrappers as wrappers
 
-import gym_super_mario_bros
-from nes_py.wrappers import JoypadSpace
-from gym_super_mario_bros.actions import COMPLEX_MOVEMENT
+#import gym_super_mario_bros
+# from nes_py.wrappers import JoypadSpace
+# from gym_super_mario_bros.actions import COMPLEX_MOVEMENT
 
-import vizdoomgym
+# import vizdoomgym
 
 
 COMPLETE_MOVEMENT = [
