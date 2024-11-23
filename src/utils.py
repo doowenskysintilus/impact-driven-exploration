@@ -6,7 +6,9 @@
 
 import torch 
 import typing
-import gym 
+
+import gymnasium as gym
+
 import threading
 from torch import multiprocessing as mp
 import logging
@@ -18,7 +20,7 @@ from src.core import prof
 from src.env_utils import FrameStack, Environment, Minigrid2Image
 from src import atari_wrappers as atari_wrappers
 
-from gym_minigrid import wrappers as wrappers
+from minigrid import wrappers as wrappers
 
 import gym_super_mario_bros
 from nes_py.wrappers import JoypadSpace
@@ -59,7 +61,10 @@ Buffers = typing.Dict[str, typing.List[torch.Tensor]]
 
 def create_env(flags):
     if 'MiniGrid' in flags.env:
-        return Minigrid2Image(wrappers.FullyObsWrapper(gym.make(flags.env)))
+        # Old : Image Only
+        #return Minigrid2Image(wrappers.FullyObsWrapper(gym.make(flags.env)))
+        return wrappers.FullyObsWrapper(gym.make(flags.env))
+    
     elif 'Mario' in flags.env:
         env = atari_wrappers.wrap_pytorch(
             atari_wrappers.wrap_deepmind(
@@ -113,12 +118,14 @@ def get_batch(free_queue: mp.SimpleQueue,
     timings.time('device')
     return batch, initial_agent_state
 
-def create_buffers(obs_shape, num_actions, flags) -> Buffers:
+def create_buffers(obs_dict, num_actions, flags) -> Buffers:
     T = flags.unroll_length
+    image_shape = obs_dict["image"].shape
+    
     specs = dict(
-        frame=dict(size=(T + 1, *obs_shape), dtype=torch.uint8),
+        frame=dict(size=(T + 1, *image_shape), dtype=torch.uint8),
         reward=dict(size=(T + 1,), dtype=torch.float32),
-        done=dict(size=(T + 1,), dtype=torch.uint8),
+        done=dict(size=(T + 1,), dtype=torch.bool),
         episode_return=dict(size=(T + 1,), dtype=torch.float32),
         episode_step=dict(size=(T + 1,), dtype=torch.int32),
         last_action=dict(size=(T + 1,), dtype=torch.int64),
@@ -132,6 +139,11 @@ def create_buffers(obs_shape, num_actions, flags) -> Buffers:
         episode_state_count=dict(size=(T + 1, ), dtype=torch.float32),
         train_state_count=dict(size=(T + 1, ), dtype=torch.float32),
     )
+
+    if "sound" in obs_dict.keys():
+        sound_shape = obs_dict["sound"].shape
+        specs["sound"] = dict(size=(T + 1, *sound_shape), dtype=torch.float32)
+
     buffers: Buffers = {key: [] for key in specs}
     for _ in range(flags.num_buffers):
         for key in buffers:
@@ -149,7 +161,7 @@ def act(i: int, free_queue: mp.SimpleQueue, full_queue: mp.SimpleQueue,
 
         gym_env = create_env(flags)
         seed = i ^ int.from_bytes(os.urandom(4), byteorder='little')
-        gym_env.seed(seed)
+        #gym_env.seed(seed)
         
         if flags.num_input_frames > 1:
             gym_env = FrameStack(gym_env, flags.num_input_frames)  

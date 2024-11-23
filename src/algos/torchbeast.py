@@ -28,10 +28,8 @@ import src.losses as losses
 from src.env_utils import FrameStack
 from src.utils import get_batch, log, create_env, create_buffers, act
 
-
 MinigridPolicyNet = models.MinigridPolicyNet
 MarioDoomPolicyNet = models.MarioDoomPolicyNet
-
 
 def learn(actor_model,
           model,
@@ -86,11 +84,11 @@ def learn(actor_model,
             'entropy_loss': entropy_loss.item(),
         }
         
-        scheduler.step()
         optimizer.zero_grad()
         total_loss.backward()
         nn.utils.clip_grad_norm_(model.parameters(), flags.max_grad_norm)
         optimizer.step()
+        scheduler.step() # For later pytorch version, otherwise you get a warning.
 
         actor_model.load_state_dict(model.state_dict())
         return stats
@@ -123,11 +121,11 @@ def train(flags):
         env = FrameStack(env, flags.num_input_frames)
 
     if 'MiniGrid' in flags.env: 
-        model = MinigridPolicyNet(env.observation_space.shape, env.action_space.n)
+        model = MinigridPolicyNet(env.observation_space, env.action_space.n)
     else:
         model = MarioDoomPolicyNet(env.observation_space.shape, env.action_space.n)
 
-    buffers = create_buffers(env.observation_space.shape, model.num_actions, flags)
+    buffers = create_buffers(env.observation_space, model.num_actions, flags)
     
     model.share_memory()
 
@@ -139,7 +137,9 @@ def train(flags):
         initial_agent_state_buffers.append(state)
     
     actor_processes = []
-    ctx = mp.get_context('fork')
+    ctx = mp.get_context('spawn') # For Windows
+    #ctx = mp.get_context('fork') # For Unix users
+
     free_queue = ctx.SimpleQueue()
     full_queue = ctx.SimpleQueue()
 
@@ -155,7 +155,7 @@ def train(flags):
         actor_processes.append(actor)
 
     if 'MiniGrid' in flags.env: 
-        learner_model = MinigridPolicyNet(env.observation_space.shape, env.action_space.n)\
+        learner_model = MinigridPolicyNet(env.observation_space, env.action_space.n)\
             .to(device=flags.device)
     else:
         learner_model = MarioDoomPolicyNet(env.observation_space.shape, env.action_space.n)\
@@ -191,6 +191,7 @@ def train(flags):
         nonlocal frames, stats
         timings = prof.Timings()
         while frames < flags.total_frames:
+            #print(buffers)
             timings.reset()
             batch, agent_state = get_batch(free_queue, full_queue, buffers, 
                 initial_agent_state_buffers, flags, timings)

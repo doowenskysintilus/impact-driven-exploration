@@ -267,9 +267,9 @@ class FullObsMinigridStateEmbeddingNet(nn.Module):
 
 
 class MinigridPolicyNet(nn.Module):
-    def __init__(self, observation_shape, num_actions):
+    def __init__(self, observation_dict, num_actions):
         super(MinigridPolicyNet, self).__init__()
-        self.observation_shape = observation_shape
+        self.observation_shape = observation_dict["image"].shape
         self.num_actions = num_actions
 
         init_ = lambda m: init(m, nn.init.orthogonal_, 

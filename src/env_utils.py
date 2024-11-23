@@ -4,18 +4,18 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
-import gym 
+import gymnasium as gym
 import torch 
 from collections import deque, defaultdict
-from gym import spaces
-import numpy as np
-from gym_minigrid.minigrid import OBJECT_TO_IDX, COLOR_TO_IDX
 
+from gymnasium import spaces
+import numpy as np
+
+from minigrid.core.constants import OBJECT_TO_IDX, COLOR_TO_IDX
 
 def _format_observation(obs):
-    obs = torch.tensor(obs)
+    obs = torch.tensor(obs.copy()) # .copy() is to avoid "negative stride error" when converting numpy to torch tensor
     return obs.view((1, 1) + obs.shape) 
-
 
 class Minigrid2Image(gym.ObservationWrapper):
     def __init__(self, env):
@@ -36,7 +36,7 @@ class Environment:
         self.env_seed = env_seed
 
     def get_partial_obs(self):
-        return self.gym_env.env.env.gen_obs()['image']
+        return self.gym_env.unwrapped.gen_obs()['image']
 
     def initial(self):
         initial_reward = torch.zeros(1, 1)
@@ -44,18 +44,22 @@ class Environment:
         self.episode_step = torch.zeros(1, 1, dtype=torch.int32)
         self.episode_win = torch.zeros(1, 1, dtype=torch.int32)
         initial_done = torch.ones(1, 1, dtype=torch.uint8)
+
         if self.fix_seed:
-            self.gym_env.seed(seed=self.env_seed)
-        initial_frame = _format_observation(self.gym_env.reset())
+            initial_state, info = self.gym_env.reset(seed=self.env_seed)
+        else:
+            initial_state, info = self.gym_env.reset()
+
+        frame = _format_observation(initial_state["image"])
         partial_obs = _format_observation(self.get_partial_obs())
 
-        if self.gym_env.env.env.carrying:
+        if self.gym_env.unwrapped.carrying:
             carried_col, carried_obj = torch.LongTensor([[COLOR_TO_IDX[self.gym_env.env.env.carrying.color]]]), torch.LongTensor([[OBJECT_TO_IDX[self.gym_env.env.env.carrying.type]]])
         else:
             carried_col, carried_obj = torch.LongTensor([[5]]), torch.LongTensor([[1]])   
 
-        return dict(
-            frame=initial_frame,
+        buff = dict(
+            frame=frame,
             reward=initial_reward,
             done=initial_done,
             episode_return=self.episode_return,
@@ -65,9 +69,15 @@ class Environment:
             carried_obj = carried_obj, 
             partial_obs=partial_obs
             )
+
+        if "sound" in initial_state:
+            buff["sound"] = _format_observation(initial_state["sound"])
+
+        return buff
         
     def step(self, action):
-        frame, reward, done, _ = self.gym_env.step(action.item())
+        obs, reward, terminated, truncated, _ = self.gym_env.step(action.item())
+        done = terminated or truncated
 
         self.episode_step += 1
         episode_step = self.episode_step
@@ -83,34 +93,41 @@ class Environment:
         
         if done:
             if self.fix_seed:
-                self.gym_env.seed(seed=self.env_seed)
-            frame = self.gym_env.reset()
+                obs, _ = self.gym_env.reset(seed=self.env_seed)
+            else:
+                obs, _ = self.gym_env.reset()
+
             self.episode_return = torch.zeros(1, 1)
             self.episode_step = torch.zeros(1, 1, dtype=torch.int32)
             self.episode_win = torch.zeros(1, 1, dtype=torch.int32)
 
-        frame = _format_observation(frame)
+        frame = _format_observation(obs["image"])
         reward = torch.tensor(reward).view(1, 1)
         done = torch.tensor(done).view(1, 1)
         partial_obs = _format_observation(self.get_partial_obs())
         
-        if self.gym_env.env.env.carrying:
-            carried_col, carried_obj = torch.LongTensor([[COLOR_TO_IDX[self.gym_env.env.env.carrying.color]]]), torch.LongTensor([[OBJECT_TO_IDX[self.gym_env.env.env.carrying.type]]])
+        if self.gym_env.unwrapped.carrying:
+            carried_col, carried_obj = torch.LongTensor([[COLOR_TO_IDX[self.gym_env.unwrapped.carrying.color]]]), torch.LongTensor([[OBJECT_TO_IDX[self.gym_env.unwrapped.carrying.type]]])
         else:
             carried_col, carried_obj = torch.LongTensor([[5]]), torch.LongTensor([[1]])   
 
-
-        return dict(
-            frame=frame,
-            reward=reward,
-            done=done,
-            episode_return=episode_return,
-            episode_step = episode_step,
-            episode_win = episode_win,
-            carried_col = carried_col,
-            carried_obj = carried_obj, 
-            partial_obs=partial_obs
+        buff = dict(
+                frame=frame,
+                reward=reward,
+                done=done,
+                episode_return=episode_return,
+                episode_step = episode_step,
+                episode_win = episode_win,
+                carried_col = carried_col,
+                carried_obj = carried_obj, 
+                partial_obs=partial_obs
             )
+        
+        if "sound" in obs:
+            sound = _format_observation(obs["sound"])
+            buff["sound"] = sound
+
+        return buff
 
     def get_full_obs(self):
         env = self.gym_env.unwrapped

@@ -12,10 +12,11 @@ from collections import deque, defaultdict
 
 import numpy as np
 
-import gym
-from gym import spaces
-import cv2
-cv2.ocl.setUseOpenCL(False)
+import gymnasium as gym
+from gymnasium import spaces
+
+#import cv2
+#cv2.ocl.setUseOpenCL(False)
 
 
 class NoNegativeRewardEnv(gym.RewardWrapper):
