@@ -54,7 +54,7 @@ class Environment:
         partial_obs = _format_observation(self.get_partial_obs())
 
         if self.gym_env.unwrapped.carrying:
-            carried_col, carried_obj = torch.LongTensor([[COLOR_TO_IDX[self.gym_env.env.env.carrying.color]]]), torch.LongTensor([[OBJECT_TO_IDX[self.gym_env.env.env.carrying.type]]])
+            carried_col, carried_obj = torch.LongTensor([[COLOR_TO_IDX[self.gym_env.unwrapped.carrying.color]]]), torch.LongTensor([[OBJECT_TO_IDX[self.gym_env.unwrapped.carrying.type]]])
         else:
             carried_col, carried_obj = torch.LongTensor([[5]]), torch.LongTensor([[1]])   
 

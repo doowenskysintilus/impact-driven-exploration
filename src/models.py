@@ -350,15 +350,15 @@ class MinigridPolicyNet(nn.Module):
 
 
 class MinigridStateEmbeddingNet(nn.Module):
-    def __init__(self, observation_shape):
+    def __init__(self, observation_dict):
         super(MinigridStateEmbeddingNet, self).__init__()
-        self.observation_shape = observation_shape
+        self.image_shape = observation_dict["image"].shape
 
         init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.
                             constant_(x, 0), nn.init.calculate_gain('relu'))
 
         self.feat_extract = nn.Sequential(
-            init_(nn.Conv2d(in_channels=self.observation_shape[2], out_channels=32, kernel_size=(3, 3), stride=2, padding=1)),
+            init_(nn.Conv2d(in_channels=self.image_shape[2], out_channels=32, kernel_size=(3, 3), stride=2, padding=1)),
             nn.ELU(),
             init_(nn.Conv2d(in_channels=32, out_channels=32, kernel_size=(3, 3), stride=2, padding=1)),
             nn.ELU(),

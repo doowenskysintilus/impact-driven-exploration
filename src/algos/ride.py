@@ -10,6 +10,7 @@ import threading
 import time
 import timeit
 import pprint
+import lib_platform
 
 import numpy as np
 
@@ -145,7 +146,6 @@ def learn(actor_model,
             'inverse_dynamics_loss': inverse_dynamics_loss.item(),
         }
         
-        scheduler.step()
         optimizer.zero_grad()
         state_embedding_optimizer.zero_grad()
         forward_dynamics_optimizer.zero_grad()
@@ -159,6 +159,7 @@ def learn(actor_model,
         state_embedding_optimizer.step()
         forward_dynamics_optimizer.step()
         inverse_dynamics_optimizer.step()
+        scheduler.step()
 
         actor_model.load_state_dict(model.state_dict())
         return stats
@@ -188,26 +189,26 @@ def train(flags):
 
     env = create_env(flags)
     if flags.num_input_frames > 1:
-        env = FrameStack(env, flags.num_input_frames)  
-
+        env = FrameStack(env, flags.num_input_frames)
+    
     if 'MiniGrid' in flags.env:
         if flags.use_fullobs_policy:
             model = FullObsMinigridPolicyNet(env.observation_space.shape, env.action_space.n)                        
         else:
-            model = MinigridPolicyNet(env.observation_space.shape, env.action_space.n)     
+            model = MinigridPolicyNet(env.observation_space, env.action_space.n)     
         if flags.use_fullobs_intrinsic:
             state_embedding_model = FullObsMinigridStateEmbeddingNet(env.observation_space.shape)\
                 .to(device=flags.device) 
         else:                   
-            state_embedding_model = MinigridStateEmbeddingNet(env.observation_space.shape)\
+            state_embedding_model = MinigridStateEmbeddingNet(env.observation_space)\
                 .to(device=flags.device) 
         forward_dynamics_model = MinigridForwardDynamicsNet(env.action_space.n)\
             .to(device=flags.device) 
         inverse_dynamics_model = MinigridInverseDynamicsNet(env.action_space.n)\
             .to(device=flags.device) 
-    else:
-        model = MarioDoomPolicyNet(env.observation_space.shape, env.action_space.n)
-        state_embedding_model = MarioDoomStateEmbeddingNet(env.observation_space.shape)\
+    else: # Not available
+        model = MarioDoomPolicyNet(env.observation_space, env.action_space.n)
+        state_embedding_model = MarioDoomStateEmbeddingNet(env.observation_space)\
             .to(device=flags.device) 
         forward_dynamics_model = MarioDoomForwardDynamicsNet(env.action_space.n)\
             .to(device=flags.device) 
@@ -215,7 +216,7 @@ def train(flags):
             .to(device=flags.device) 
 
 
-    buffers = create_buffers(env.observation_space.shape, model.num_actions, flags)
+    buffers = create_buffers(env.observation_space, model.num_actions, flags)
     
     model.share_memory()
 
@@ -227,7 +228,14 @@ def train(flags):
         initial_agent_state_buffers.append(state)
     
     actor_processes = []
-    ctx = mp.get_context('fork')
+    if lib_platform.is_platform_windows:
+        context_method = "spawn"
+    else:
+        context_method = "fork"
+
+    ctx = mp.get_context(context_method)
+
+    ctx = mp.get_context(context_method)
     free_queue = ctx.SimpleQueue()
     full_queue = ctx.SimpleQueue()
     
@@ -244,13 +252,13 @@ def train(flags):
 
     if 'MiniGrid' in flags.env: 
         if flags.use_fullobs_policy:
-            learner_model = FullObsMinigridPolicyNet(env.observation_space.shape, env.action_space.n)\
+            learner_model = FullObsMinigridPolicyNet(env.observation_space, env.action_space.n)\
                 .to(device=flags.device)
         else:
-            learner_model = MinigridPolicyNet(env.observation_space.shape, env.action_space.n)\
+            learner_model = MinigridPolicyNet(env.observation_space, env.action_space.n)\
                 .to(device=flags.device)
     else:
-        learner_model = MarioDoomPolicyNet(env.observation_space.shape, env.action_space.n)\
+        learner_model = MarioDoomPolicyNet(env.observation_space, env.action_space.n)\
             .to(device=flags.device)
 
     optimizer = torch.optim.RMSprop(

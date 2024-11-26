@@ -11,6 +11,7 @@ import time
 import timeit
 import pprint
 
+import lib_platform
 import numpy as np
 
 import torch
@@ -137,8 +138,12 @@ def train(flags):
         initial_agent_state_buffers.append(state)
     
     actor_processes = []
-    ctx = mp.get_context('spawn') # For Windows
-    #ctx = mp.get_context('fork') # For Unix users
+    if lib_platform.is_platform_windows:
+        context_method = "spawn"
+    else:
+        context_method = "fork"
+
+    ctx = mp.get_context(context_method)
 
     free_queue = ctx.SimpleQueue()
     full_queue = ctx.SimpleQueue()

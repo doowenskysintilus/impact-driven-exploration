@@ -63,8 +63,10 @@ def create_env(flags):
     if 'MiniGrid' in flags.env:
         # Old : Image Only
         #return Minigrid2Image(wrappers.FullyObsWrapper(gym.make(flags.env)))
-        return wrappers.FullyObsWrapper(gym.make(flags.env))
+        #return wrappers.FullyObsWrapper(gym.make(flags.env))
+        return gym.make(flags.env)
     
+
     elif 'Mario' in flags.env:
         env = atari_wrappers.wrap_pytorch(
             atari_wrappers.wrap_deepmind(
