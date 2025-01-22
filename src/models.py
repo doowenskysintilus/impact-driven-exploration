@@ -270,6 +270,7 @@ class MinigridPolicyNet(nn.Module):
     def __init__(self, observation_dict, num_actions):
         super(MinigridPolicyNet, self).__init__()
         self.observation_shape = observation_dict["image"].shape
+        self.observation_shape_sound=observation_dict["sound"].shape
         self.num_actions = num_actions
 
         init_ = lambda m: init(m, nn.init.orthogonal_, 
@@ -284,9 +285,15 @@ class MinigridPolicyNet(nn.Module):
             init_(nn.Conv2d(in_channels=32, out_channels=32, kernel_size=(3, 3), stride=2, padding=1)),
             nn.ELU(),
         )
+
+        self.sound_mlp=nn.Sequential(
+            init_(nn.Linear(self.observation_shape_sound[0], 128)),
+            nn.ReLU(),
+            init_(nn.Linear(128, 8))
+        )
     
         self.fc = nn.Sequential(
-            init_(nn.Linear(32, 1024)),
+            init_(nn.Linear(40, 1024)),
             nn.ReLU(),
             init_(nn.Linear(1024, 1024)),
             nn.ReLU(),
@@ -320,7 +327,15 @@ class MinigridPolicyNet(nn.Module):
         x = x.transpose(1, 3)
         x = self.feat_extract(x)
         x = x.view(T * B, -1)
-        core_input = self.fc(x)
+        # SOUND 
+        x_sound_inputs=inputs['sound'].squeeze(1)
+        x_sound_inputs=x_sound_inputs.float()
+        x_sound=self.sound_mlp(x_sound_inputs)
+        x_sound=x_sound.view(T * B, -1)
+
+        x_tot = torch.cat((x, x_sound), dim=1) # concat 
+
+        core_input = self.fc(x_tot)
 
         core_input = core_input.view(T, B, -1)
         core_output_list = []
