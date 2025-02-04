@@ -15,6 +15,7 @@ from minigrid.envs.lavagap import LavaGapEnv
 from minigrid.envs.lockedroom import LockedRoom, LockedRoomEnv
 from minigrid.envs.memory import MemoryEnv
 from minigrid.envs.multiroom import MultiRoom, MultiRoomEnv
+from minigrid.envs.obstructedmaze_sound import ObstructedMaze_1Dlhb_sound
 from minigrid.envs.obstructedmaze import (
     ObstructedMaze_1Dlhb,
     ObstructedMaze_Full,

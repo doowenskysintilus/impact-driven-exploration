@@ -22,6 +22,13 @@ except Exception:  # nosec
 
 def register_minigrid_envs():
 
+    # *** NEW *** SOUND  ObstructedMaze_1Dlhb_sound ENV
+    register(
+        id="MiniGrid-ObstructedMaze_1Dlhb_sound-v0",
+        entry_point="minigrid.envs:ObstructedMaze_1Dlhb_sound",
+        kwargs={"key_in_box" : False , "blocked" : True},
+    ) 
+
     # *** NEW *** SOUND ENV
     register(
         id="MiniGrid-FetchEnvSoundS8N3-v0",
