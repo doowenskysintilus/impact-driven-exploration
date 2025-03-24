@@ -284,7 +284,9 @@ class Bouton(WorldObj):
     def render(self, img):
         c = COLORS[self.color]
         fill_coords(img, point_in_rect(0.3, 0.7, 0.65, 0.75), c)
+        fill_coords(img, point_in_circle(0.5, 0.5, 0.22), (0, 0, 0))
         fill_coords(img, point_in_circle(0.5, 0.5, 0.2), c)
+       
 
 
 class Box(WorldObj):

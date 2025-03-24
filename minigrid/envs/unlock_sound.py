@@ -1,5 +1,14 @@
 from __future__ import annotations
-
+from minigrid.core.world_object import (
+    WorldObj,
+    Floor,
+    Wall,
+    Door, 
+    Ball, 
+    Box, 
+    Key,
+    Bouton
+)
 from minigrid.core.mission import MissionSpace
 from minigrid.core.roomgrid import RoomGrid
 
@@ -94,6 +103,7 @@ class UnlockWithButton_SoundEnv(RoomGrid):
         self.place_agent(0, 0)
         
         self.door = door
+        self.unlocked_doors = set()
         self.mission = "open the door"
 
     def gen_obs(self):
@@ -108,5 +118,10 @@ class UnlockWithButton_SoundEnv(RoomGrid):
             if self.door.is_open:
                 reward = self._reward()
                 terminated = True
+
+        # if a door is unlocked, play the sound of the door opening
+        if self.door.is_locked and self.door not in self.unlocked_doors:
+            self.sound_engine.play_unlock_sound()
+            self.unlocked_doors.add(self.door)
 
         return obs, reward, terminated, truncated, info

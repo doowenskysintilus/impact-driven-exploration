@@ -27,7 +27,7 @@ features_sound_path = path.join("minigrid", "sound", "Features")
 
 goal_sound_path = path.join(processed_sound_path, "goal.wav")
 distractor_sound_path = path.join(processed_sound_path, "stone1.wav")
-locked_door_sound_path = path.join(processed_sound_path, "locked_door1.wav")
+unlocked_door_sound_path = path.join(processed_sound_path, "locked_door1.wav")
 open_door_sound_path = path.join(processed_sound_path, "door_open.wav")
 
 class SoundEngine(ABC):
@@ -92,10 +92,12 @@ class DoorSoundEngine(SoundEngine):
         super().__init__()
 
         self.key = self.preprocess_sound(wavfile.read(goal_sound_path)[1])
-        self.locked_door_sound = self.preprocess_sound(wavfile.read(locked_door_sound_path)[1])
+        self.unlocked_door_sound = self.preprocess_sound(wavfile.read(unlocked_door_sound_path)[1])
+        self.locked_door_sound = self.preprocess_sound(wavfile.read(distractor_sound_path)[1])
         self.open_door_sound = self.preprocess_sound(wavfile.read(open_door_sound_path)[1])
 
         self.no_sound = np.zeros_like(self.key)
+        self.boolean_for_unlocked_door = False
 
     def preprocess_sound(self, sound):
 
@@ -107,13 +109,18 @@ class DoorSoundEngine(SoundEngine):
         sound = decimate(sound, q = downscale_factor)
         return sound
     
+    def play_unlock_sound(self):
+        self.boolean_for_unlocked_door=True
+
     def play(self, env):
         # Get the position in front of the agent
         fwd_pos = env.front_pos
         # Get the contents of the cell in front of the agent
         fwd_cell = env.grid.get(*fwd_pos)
-
-        if fwd_cell and fwd_cell is Door and not Door.is_locked:
+        if self.boolean_for_unlocked_door:
+            generated_sound = self.unlocked_door_sound
+            self.boolean_for_unlocked_door = False
+        elif fwd_cell and fwd_cell is Door and not Door.is_locked:
             generated_sound = self.open_door_sound
         elif fwd_cell and fwd_cell is Door and Door.is_locked:
             generated_sound = self.locked_door_sound
