@@ -25,7 +25,11 @@ from minigrid.envs.obstructedmaze_v1 import ObstructedMaze_Full_V1
 from minigrid.envs.playground import PlaygroundEnv
 from minigrid.envs.putnear import PutNearEnv
 from minigrid.envs.redbluedoors import RedBlueDoorEnv
-from minigrid.envs.unlock import UnlockEnv
+from minigrid.envs.unlock import (
+    UnlockEnv,
+    UnlockWithButtonEnv
+)
+from minigrid.envs.unlock_sound import UnlockWithButton_SoundEnv
 from minigrid.envs.unlockpickup import UnlockPickupEnv
 
 from minigrid.envs.fetch_sound import FetchEnvSound

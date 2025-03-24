@@ -36,7 +36,18 @@ def register_minigrid_envs():
         kwargs={"size" : 8, "numObjs" : 3},
     )   
 
+    # *** NEW *** ENV MiniGrid-UnlockWithButton-v0
+    register(
+        id="MiniGrid-UnlockWithButton-v0",
+        entry_point="minigrid.envs:UnlockWithButtonEnv",
+    )
 
+    # *** NEW *** BOUTON SOUND ENV
+    register(
+        id="MiniGrid-UnlockWithButton_SoundEnv-v0",
+        entry_point="minigrid.envs:UnlockWithButton_SoundEnv",
+    )
+     
     # BlockedUnlockPickup
     # ----------------------------------------
 
