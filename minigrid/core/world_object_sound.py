@@ -5,7 +5,8 @@ from minigrid.core.world_object import (
     Door, 
     Ball, 
     Box, 
-    Key
+    Key,
+    Bouton
 )
 
 from gymnasium import spaces

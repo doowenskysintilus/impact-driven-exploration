@@ -88,6 +88,8 @@ class WorldObj:
             v = Ball(color)
         elif obj_type == "key":
             v = Key(color)
+        elif obj_type == "bouton":
+            v = Bouton(color)
         elif obj_type == "box":
             v = Box(color)
         elif obj_type == "door":
@@ -267,6 +269,22 @@ class Ball(WorldObj):
 
     def render(self, img):
         fill_coords(img, point_in_circle(0.5, 0.5, 0.31), COLORS[self.color])
+
+class Bouton(WorldObj):
+    def __init__(self, color="blue" , linked_door: Door | None = None):
+        super().__init__("bouton", color)
+        self.linked_door = linked_door
+
+    def toggle(self, env, pos):
+        """Active le bouton : déverouille la porte s'il y en a une"""
+        if self.linked_door is not None:
+            self.linked_door.is_locked = False
+        return True
+
+    def render(self, img):
+        c = COLORS[self.color]
+        fill_coords(img, point_in_rect(0.3, 0.7, 0.65, 0.75), c)
+        fill_coords(img, point_in_circle(0.5, 0.5, 0.2), c)
 
 
 class Box(WorldObj):
