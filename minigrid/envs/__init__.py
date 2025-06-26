@@ -33,3 +33,4 @@ from minigrid.envs.unlock_sound import UnlockWithButton_SoundEnv
 from minigrid.envs.unlockpickup import UnlockPickupEnv
 
 from minigrid.envs.fetch_sound import FetchEnvSound
+from minigrid.envs.multiroom_sound import MultiRoomEnvSound

@@ -47,6 +47,30 @@ def register_minigrid_envs():
         id="MiniGrid-UnlockWithButton_SoundEnv-v0",
         entry_point="minigrid.envs:UnlockWithButton_SoundEnv",
     )
+
+    # *** NEW *** ENV MultiRoomEnvSound
+    register(
+        id="MiniGrid-MultiRoomEnvSound-N2-S4-v0",
+        entry_point="minigrid.envs:MultiRoomEnvSound",
+        kwargs={"minNumRooms": 2, "maxNumRooms": 2, "maxRoomSize": 4},
+    )
+    register(
+        id="MiniGrid-MultiRoomEnvSound-N4-S5-v0",
+        entry_point="minigrid.envs:MultiRoomEnvSound",
+        kwargs={"minNumRooms": 6, "maxNumRooms": 6, "maxRoomSize": 5},
+    )
+
+    register(
+        id="MiniGrid-MultiRoomEnvSound-N6-v0",
+        entry_point="minigrid.envs:MultiRoomEnvSound",
+        kwargs={"minNumRooms": 6, "maxNumRooms": 6},
+    )
+
+    register(
+        id="MiniGrid-MultiRoomEnvSound-N7-S4-v0",
+        entry_point="minigrid.envs:MultiRoomEnvSound",
+        kwargs={"minNumRooms": 7, "maxNumRooms": 7, "maxRoomSize": 4},
+    )
      
     # BlockedUnlockPickup
     # ----------------------------------------
@@ -419,6 +443,8 @@ def register_minigrid_envs():
         entry_point="minigrid.envs:MultiRoomEnv",
         kwargs={"minNumRooms": 7, "maxNumRooms": 7, "maxRoomSize": 4},
     )
+
+
 
     # ObstructedMaze
     # ----------------------------------------

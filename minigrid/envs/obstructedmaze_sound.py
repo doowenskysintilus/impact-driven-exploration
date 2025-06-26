@@ -6,7 +6,7 @@ from minigrid.core.roomgrid import RoomGrid
 from minigrid.core.world_object import Ball, Box, Key
 from minigrid.envs.obstructedmaze import ObstructedMazeEnv
 
-from minigrid.core.world_object_sound import DoorSoundEngine
+from minigrid.core.world_object_sound import FarDoorSoundEngine
 from gymnasium import spaces
 class ObstructedMaze_1Dlhb_sound(ObstructedMazeEnv):
     """
@@ -19,7 +19,7 @@ class ObstructedMaze_1Dlhb_sound(ObstructedMazeEnv):
         self.blocked = blocked
 
         super().__init__(num_rows=1, num_cols=2, num_rooms_visited=2, **kwargs)
-        self.sound_engine = DoorSoundEngine()
+        self.sound_engine = FarDoorSoundEngine()
         
         old_observation_space = self.observation_space
 

@@ -16,14 +16,27 @@ from scipy.io import wavfile
 
 
 import numpy as np
+import os
 
 from os import path
 from abc import ABC, abstractmethod
 
-minisound_path = path.join("..", "minisound")
+#minisound_path = path.join("..", "minisound")
 
-processed_sound_path = path.join(minisound_path, "minigrid", "sound", "Processed")
-features_sound_path = path.join("minigrid", "sound", "Features")
+#processed_sound_path = path.join(minisound_path, "minigrid", "sound", "Processed")
+#features_sound_path = path.join("minigrid", "sound", "Features")
+
+
+# Obtenir le répertoire absolu du fichier courant (fichier.py)
+current_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Construire le chemin vers minisound (on remonte d'un dossier depuis 'core')
+minisound_path = os.path.normpath(os.path.join(current_dir, '..'))
+
+# Construire le chemin complet vers 'Processed' et 'Features'
+processed_sound_path = os.path.join(minisound_path, "sound", "Processed")
+features_sound_path = os.path.join(minisound_path, "minigrid", "sound", "Features")
+
 
 goal_sound_path = path.join(processed_sound_path, "goal.wav")
 distractor_sound_path = path.join(processed_sound_path, "stone1.wav")
@@ -87,7 +100,8 @@ class GoalSoundEngine(SoundEngine):
         return sound_space
 
         
-class DoorSoundEngine(SoundEngine):
+class FarDoorSoundEngine(SoundEngine):
+
     def __init__(self) -> None:
         super().__init__()
 
@@ -142,3 +156,10 @@ class DoorSoundEngine(SoundEngine):
             dtype=np.float64,
         )
         return sound_space
+    
+"""class ProximityDoorSoundEngine(SoundEngine):
+    pass
+
+class ProximityColorDoorSoundEngine(SoundEngine):
+    pass"""
+

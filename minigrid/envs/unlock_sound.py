@@ -13,7 +13,7 @@ from minigrid.core.mission import MissionSpace
 from minigrid.core.roomgrid import RoomGrid
 
 from gymnasium import spaces
-from minigrid.core.world_object_sound import DoorSoundEngine
+from minigrid.core.world_object_sound import FarDoorSoundEngine
 
 
 class UnlockWithButton_SoundEnv(RoomGrid):
@@ -80,7 +80,7 @@ class UnlockWithButton_SoundEnv(RoomGrid):
             **kwargs,
         )
 
-        self.sound_engine = DoorSoundEngine()
+        self.sound_engine = FarDoorSoundEngine()
         old_observation_space = self.observation_space
         new_obs_dict = {key:value for key, value in old_observation_space.items()}
         # + Adding the sound features comming from the sound engine
