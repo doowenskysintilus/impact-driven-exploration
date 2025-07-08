@@ -9,7 +9,7 @@ import argparse
 parser = argparse.ArgumentParser(description='PyTorch Scalable Agent')
 
 # General Settings.
-parser.add_argument('--env', type=str, default='MiniGrid-ObstructedMaze-2Dlh-v0',
+parser.add_argument('--env', type=str, default='MiniGrid-FetchEnvSoundS8N3-v0',
                     help='Gym environment. Other options are: SuperMarioBros-1-1-v0 \
                     or VizdoomMyWayHomeDense-v0 etc.')
 parser.add_argument('--xpid', default=None,
@@ -96,8 +96,8 @@ parser.add_argument('--no_reward', action='store_true',
                     help='No extrinsic reward. The agent uses only intrinsic reward to learn.')
 
 # Training Models.
-parser.add_argument('--model', default='vanilla',
-                    choices=['vanilla', 'count', 'curiosity', 'rnd', 'ride', 'no-episodic-counts', 'only-episodic-counts'],
+parser.add_argument('--model', default='she',
+                    choices=['vanilla', 'count', 'curiosity', 'rnd','she', 'ride', 'no-episodic-counts', 'only-episodic-counts'],
                     help='Model used for training the agent.')
 
 # Baselines for AMIGo paper.
@@ -105,3 +105,7 @@ parser.add_argument('--use_fullobs_policy', action='store_true',
                     help='Use a full view of the environment as input to the policy network.')
 parser.add_argument('--use_fullobs_intrinsic', action='store_true',
                     help='Use a full view of the environment for computing the intrinsic reward.')
+
+
+parser.add_argument('--use_sound', action='store_true',
+                   help='Enable sound input processing')

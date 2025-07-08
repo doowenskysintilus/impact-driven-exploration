@@ -13,9 +13,13 @@ import numpy as np
 
 from minigrid.core.constants import OBJECT_TO_IDX, COLOR_TO_IDX
 
-def _format_observation(obs):
+"""def _format_observation(obs):
     obs = torch.tensor(obs.copy()) # .copy() is to avoid "negative stride error" when converting numpy to torch tensor
-    return obs.view((1, 1) + obs.shape) 
+    return obs.view((1, 1) + obs.shape) """
+
+def _format_observation(obs):
+    obs = torch.tensor(obs.copy(), dtype=torch.float32) / 255.0  # Convert to float and normalize
+    return obs.view((1, 1) + obs.shape)
 
 class Minigrid2Image(gym.ObservationWrapper):
     def __init__(self, env):
@@ -76,6 +80,7 @@ class Environment:
         return buff
         
     def step(self, action):
+
         obs, reward, terminated, truncated, _ = self.gym_env.step(action.item())
         done = terminated or truncated
 
@@ -163,12 +168,14 @@ class FrameStack(gym.Wrapper):
 
     def reset(self):
         ob = self.env.reset()
+        #print(f"[RESET] Observation : {ob}")
         for _ in range(self.k):
             self.frames.append(ob)
         return self._get_ob()
 
     def step(self, action):
         ob, reward, done, info = self.env.step(action)
+        #print(f"[STEP] Observation : {ob}")
         self.frames.append(ob)
         return self._get_ob(), reward, done, info
 
@@ -204,5 +211,3 @@ class LazyFrames(object):
 
     def __getitem__(self, i):
         return self._force()[i]
-
-
