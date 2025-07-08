@@ -120,7 +120,7 @@ class MultiRoomEnvSound(MiniGridEnv):
         self.sound_space = spaces.Box(
             low=-1.0,
             high=1.0,
-            shape=(6000,),
+            shape=(600,),
             dtype=np.float32
         )
 

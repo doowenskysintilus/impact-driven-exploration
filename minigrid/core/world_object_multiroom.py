@@ -68,7 +68,7 @@ class GoalSoundEngine(SoundEngine):
 
         # keep only one channel
         sound = sound[:, 0]
-        downscale_factor = int(sound.shape[0] / 6000)
+        downscale_factor = int(sound.shape[0] / 600)
 
         sound = (sound - sound.mean()) / sound.std()
         sound = decimate(sound, q = downscale_factor)
@@ -139,7 +139,7 @@ class DoorSoundEngine(SoundEngine):
 
         # keep only one channel
         sound = sound[:, 0]
-        downscale_factor = int(sound.shape[0] / 6000)
+        downscale_factor = int(sound.shape[0] / 600)
 
         sound = (sound - sound.mean()) / sound.std()
         sound = decimate(sound, q = downscale_factor)
@@ -195,13 +195,13 @@ class ProximityDoorSoundEngine(SoundEngine):
         if sound.ndim == 2:
             sound = sound[:, 0]
         #downscale_factor = int(np.ceil(sound.shape[0] / 6000))
-        downscale_factor = int(sound.shape[0] / 6000)
+        downscale_factor = int(sound.shape[0] / 600)
         sound = (sound - sound.mean()) / (sound.std())
         sound = decimate(sound, q=downscale_factor)
-        if sound.shape[0] > 6000:
-            sound = sound[:6000]
-        elif sound.shape[0] < 6000:
-            sound = np.pad(sound, (0, 6000 - sound.shape[0]), mode='constant')
+        if sound.shape[0] > 600:
+            sound = sound[:600]
+        elif sound.shape[0] < 600:
+            sound = np.pad(sound, (0, 600 - sound.shape[0]), mode='constant')
         sound = (sound - sound.min()) / (sound.max() - sound.min())
         return sound.astype(np.float32)
     
@@ -212,23 +212,6 @@ class ProximityDoorSoundEngine(SoundEngine):
         fwd_pos = env.front_pos
         fwd_cell = env.grid.get(*fwd_pos)
         agent_pos = env.agent_pos
-
-        """def play(self, env):
-            fwd_pos = env.front_pos
-            fwd_cell = env.grid.get(*fwd_pos)
-            agent_pos = env.agent_pos
-
-            from minigrid.core.world_object import Goal
-
-            # Si l'agent est sur la case Goal, jouer le son de destination
-            if isinstance(env.grid.get(*agent_pos), Goal):
-                return self.goal_sound
-
-            # Sinon, logique normale
-            if isinstance(fwd_cell, Goal):
-                return self.goal_sound
-            else:
-                return self.distractor_sound"""
 
         from minigrid.core.world_object import Door, Goal
 
@@ -250,7 +233,7 @@ class ProximityDoorSoundEngine(SoundEngine):
                 generated_sound = self.closed_door_sound
         else:
             #generated_sound = self.no_sound
-            generated_sound = self.no_sound
+            generated_sound = self.distractor_sound
 
         return generated_sound
     
@@ -260,19 +243,19 @@ class ProximityDoorSoundEngine(SoundEngine):
         from minigrid.core.world_object import Door
 
         if fwd_cell is None:
-            return np.zeros(6000, dtype=np.float32)
+            return np.zeros(600, dtype=np.float32)
         elif isinstance(fwd_cell, Door):
             if getattr(fwd_cell, "is_locked", False):
-                return np.ones(6000, dtype=np.float32) * 0.8
+                return np.ones(600, dtype=np.float32) * 0.8
             elif getattr(fwd_cell, "is_open", False):
-                return np.ones(6000, dtype=np.float32) * 1.0
+                return np.ones(600, dtype=np.float32) * 1.0
             elif getattr(fwd_cell, "is_closed", False):
-                return np.ones(6000, dtype=np.float32) * 0.5
+                return np.ones(600, dtype=np.float32) * 0.5
             else:
-                return np.zeros(6000, dtype=np.float32)
+                return np.zeros(600, dtype=np.float32)
             
         else:
-            return np.zeros(6000, dtype=np.float32)"""
+            return np.zeros(600, dtype=np.float32)"""
     
     """def play(self, env):
         return self.no_sound"""
@@ -282,7 +265,7 @@ class ProximityDoorSoundEngine(SoundEngine):
         sound_space = spaces.Box(
             low=0.0,
             high=1.0,
-            shape=(6000,),
+            shape=(600,),
             dtype=np.float32,
         )
         return sound_space
@@ -320,18 +303,18 @@ class ProximityColorDoorSoundEngine(SoundEngine):
     
         }
         #si la couleur n'est pas reconnue
-        self.default_sound = np.zeros(6000, dtype=np.float32)
+        self.default_sound = np.zeros(600, dtype=np.float32)
 
     def preprocess_sound(self, sound):
         if sound.ndim == 2:
             sound = sound[:, 0]
-        downscale_factor = int(sound.shape[0] / 6000)
+        downscale_factor = int(sound.shape[0] / 600)
         sound = (sound - sound.mean()) / (sound.std())
         sound = decimate(sound, q=downscale_factor)
-        if sound.shape[0] > 6000:
-            sound = sound[:6000]
-        elif sound.shape[0] < 6000:
-            sound = np.pad(sound, (0, 6000 - sound.shape[0]), mode='constant')
+        if sound.shape[0] > 600:
+            sound = sound[:600]
+        elif sound.shape[0] < 600:
+            sound = np.pad(sound, (0, 600 - sound.shape[0]), mode='constant')
         sound = (sound - sound.min()) / (sound.max() - sound.min())
         return sound.astype(np.float32)
 
@@ -364,6 +347,6 @@ class ProximityColorDoorSoundEngine(SoundEngine):
         return spaces.Box(
             low=0.0,
             high=1.0,
-            shape=(6000,),
+            shape=(600,),
             dtype=np.float32,
         )

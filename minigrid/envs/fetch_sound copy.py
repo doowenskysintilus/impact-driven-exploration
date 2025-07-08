@@ -10,7 +10,6 @@ from gymnasium import spaces
 from minigrid.core.world_object_sound import GoalSoundEngine
 
 from os import path
-import numpy as np
 
 class FetchEnvSound(MiniGridEnv):
     """
@@ -83,7 +82,6 @@ class FetchEnvSound(MiniGridEnv):
         if max_steps is None:
             max_steps = 5 * size**2
 
-        self.mission_space = MissionSpace(mission_func=lambda: "Fetch the sound object.")
         super().__init__(
             mission_space=mission_space,
             width=size,
@@ -95,30 +93,20 @@ class FetchEnvSound(MiniGridEnv):
         )
 
         self.sound_engine = GoalSoundEngine()
-        #elf.sound_engine.sound_space = spaces.Box(low=-np.inf, high=np.inf, shape=(6000,), dtype=np.float32)
-        self.sound_space = spaces.Box(low=-np.inf, high=np.inf, shape=(6000,), dtype=np.float32)
-
-
 
         old_observation_space = self.observation_space
 
         # Build the new observation space, based on the old one
         new_obs_dict = {key:value for key, value in old_observation_space.items()}
         # + Adding the sound features comming from the sound engine
-        #new_obs_dict["sound"] = self.sound_engine.sound_space
-        new_obs_dict["sound"] = self.sound_space
+        new_obs_dict["sound"] = self.sound_engine.sound_space
+
         self.observation_space = spaces.Dict(new_obs_dict)
 
-        #new_obs_dict["label"] = spaces.Discrete(2)  # Label binaire : 0 ou 1
-        #self.observation_space = spaces.Dict(new_obs_dict)
 
-
-    """@staticmethod
-    def _gen_mission(color: str, obj_type: str):
-        return f"{color} {obj_type}"""
     @staticmethod
     def _gen_mission(color: str, obj_type: str):
-        return f"get a {color} {obj_type}"
+        return f"{color} {obj_type}"
 
     def _gen_grid(self, width, height):
         self.grid = Grid(width, height)
@@ -164,28 +152,15 @@ class FetchEnvSound(MiniGridEnv):
         self.mission = "get a %s" % descStr
         assert hasattr(self, "mission")
 
-    """def gen_obs(self):
-        obs = super().gen_obs()
-        obs["sound"] = self.sound_engine.play(self)
-        #print("obs gen_obs :", obs)
-        return obs"""
-    
     def gen_obs(self):
         obs = super().gen_obs()
-        obs["sound"] = np.asarray(self.sound_engine.play(self), dtype=np.float32)
-
-        assert self.observation_space["image"].contains(obs["image"]), f"Image observation is invalid: {obs['image']}"
-        assert self.observation_space["direction"].contains(obs["direction"]), f"Direction observation is invalid: {obs['direction']}"
-        if "mission" in self.observation_space.spaces:
-            assert self.observation_space["mission"].contains(obs["mission"]), f"Mission observation is invalid: {obs['mission']}"
-        assert self.observation_space["sound"].contains(obs["sound"]), f"Sound observation is invalid: {obs['sound']}"
-
-        assert self.observation_space.contains(obs), "Observation is outside the defined observation space!"
+        obs["sound"] = self.sound_engine.play(self)
         return obs
-    
 
     def step(self, action):
         obs, reward, terminated, truncated, info = super().step(action)
+
+        #print(f"step: {self.steps_remaining} {action} {reward} {terminated} {truncated}")
 
         if self.carrying:
             if (
