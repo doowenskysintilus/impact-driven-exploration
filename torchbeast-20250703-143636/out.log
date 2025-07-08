@@ -1,0 +1,3 @@
+Saving logs data to ../torchbeast-20250703-143636/logs.csv
+Saving logs' fields to ../torchbeast-20250703-143636/fields.csv
+Updated log fields: ['_tick', '_time', 'frames', 'total_loss', 'mean_episode_return', 'pg_loss', 'baseline_loss', 'entropy_loss', 'discrim_loss_mean', 'mean_rewards', 'mean_intrinsic_rewards', 'mean_total_rewards', 'mean_sound_features', 'mean_count_rewards']
