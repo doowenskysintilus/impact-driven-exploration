@@ -265,7 +265,7 @@ class FullObsMinigridStateEmbeddingNet(nn.Module):
 
         return core_input
 
-def normalize_input(x):
+"""def normalize_input(x):
     return x.float() / 255.0
 
 class LambdaLayer(nn.Module):
@@ -274,7 +274,7 @@ class LambdaLayer(nn.Module):
         self.func = func
 
     def forward(self, x):
-        return self.func(x)
+        return self.func(x)"""
 
 
 class MinigridPolicyNetClassif(nn.Module):
@@ -288,7 +288,8 @@ class MinigridPolicyNetClassif(nn.Module):
 
         # Feature for image
         self.feat_extract = nn.Sequential(
-            LambdaLayer(normalize_input),
+            #LambdaLayer(normalize_input),
+            nn.Identity(),
             init_(nn.Conv2d(in_channels=self.observation_shape[2], out_channels=32, kernel_size=(3, 3), stride=2, padding=1)),
             nn.ELU(),
             init_(nn.Conv2d(in_channels=32, out_channels=32, kernel_size=(3, 3), stride=2, padding=1)),
@@ -366,6 +367,7 @@ class MinigridPolicyNetClassif(nn.Module):
         T, B, H, W, C = x.shape
         
         x = x.view(T * B, H, W, C).permute(0, 3, 1, 2)  # [T*B, C, H, W]
+        x = x.float() #/ 255.0  # Normalization if needed
         x = self.feat_extract(x)
         x = x.view(T * B, -1)
 
