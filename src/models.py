@@ -323,12 +323,6 @@ class MinigridPolicyNetClassif(nn.Module):
             nn.ReLU(),
             #nn.Dropout(0.3)
         )
-        """self.fc = nn.Sequential(
-            init_(nn.Linear(32*1*1 + 8, 1024)),
-            nn.ReLU(),
-            init_(nn.Linear(1024, 1024)),
-            nn.ReLU()
-        )"""
 
         #Output
         self.policy = init_(nn.Linear(1024, self.num_actions))
