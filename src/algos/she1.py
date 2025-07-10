@@ -3,11 +3,6 @@
 
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
-
-# she.py
-# Algorithme d'apprentissage par renforcement profond avec exploration intrinsèque audio-visuelle
-# Basé sur MiniGrid, avec ajout d'une récompense intrinsèque calculée par un discriminateur
-
 #python main.py --model she --env MiniGrid-FetchEnvSoundS8N3-v0 --total_frames 30 --intrinsic_reward_coef 0.1 --entropy_cost 0.0005
 import logging
 import os
@@ -47,45 +42,82 @@ import json
 
 replay_buffer = []
 
-# calcul de la loss du discriminateur et génération des paires vraies(1)/fausses(0)
 
 def compute_discriminator_loss(discriminator, visual_state, action, audio_state, discriminator_weighted=False):
-    """
-    Construire un batch de vraies et fausses paires (image, son), 
-    calculer la sortie du discriminateur et la loss binaire associée.
-    Retourner la loss, les labels cibles, les prédictions et la taille du batch d'origine.
-    """
     expected_audio_dim = discriminator.observation_shape_sound[0]
     device = visual_state.device
 
-    # Mise en forme des entrées
     if audio_state.dim() == 3:
         audio_state = audio_state.reshape(-1, audio_state.shape[-1])
     if visual_state.dim() == 4:
         visual_state = visual_state.reshape(-1, *visual_state.shape[2:])
 
-    # Ajustement de la dimension audio si besoin
     if audio_state.shape[-1] > expected_audio_dim:
         audio_state = audio_state[..., :expected_audio_dim]
     elif audio_state.shape[-1] < expected_audio_dim:
         pad = expected_audio_dim - audio_state.shape[-1]
         audio_state = F.pad(audio_state, (0, pad))
 
-    batch_size = audio_state.shape[0]
+    batch_size = audio_state.shape[0] 
 
+    audio_state_flags = torch.rand(batch_size, device=device) > 0.5
+
+    idx = torch.randperm(batch_size, device=device)
+    false_audio_state = audio_state[idx]
+
+    # On veut que audio_state_flags ait la même forme que audio_state sur les 4 dimensions
+    audio_state_flags = audio_state_flags.view(-1, 1, 1, 1)
+    # Supprime les dimensions singleton inutiles
+    while audio_state.dim() > 2 and audio_state.shape[1] == 1:
+        audio_state = audio_state.squeeze(1)
+        false_audio_state = false_audio_state.squeeze(1)
+    audio_state_flags = audio_state_flags.view(-1, *[1]*(audio_state.dim()-1))
+    combined_audio = torch.where(audio_state_flags, audio_state, false_audio_state)
+    #combined_audio = torch.where(audio_state_flags.unsqueeze(-1), audio_state, false_audio_state)
+    targets = audio_state_flags.float().unsqueeze(-1)
+
+    """
     # Vraies paires
-    visual_state_true = visual_state
-    audio_state_true = audio_state
-    labels_true = torch.ones(batch_size, 1, device=device)
-    is_empty = (audio_state_true.abs().sum(dim=1) < 1e-5).unsqueeze(1)
-    labels_true[is_empty] = 0
-
-    # Fausses paires (shuffle)
+    visual_state_true = visual_state 
+    audio_state_true = audio_state 
+    
     idx = torch.randperm(batch_size, device=device)
     for i in range(batch_size):
         while torch.equal(audio_state[idx[i]], audio_state[i]):
             idx[i] = torch.randint(0, batch_size, (1,), device=device)
     audio_state_false = audio_state[idx]
+    visual_state_false = visual_state
+
+    # Concatène
+    visual_state_batch = torch.cat([visual_state_true, visual_state_false], dim=0)
+    audio_state_batch = torch.cat([audio_state_true, audio_state_false], dim=0)
+
+    # Attribue label 1 si au moins une valeur du son est différente de 0, sinon 0
+    targets = (audio_state_batch.abs().sum(dim=1, keepdim=True) > 1e-5).float()
+    """
+
+    """
+    # Vraies paires
+    visual_state_true = visual_state
+    audio_state_true = audio_state
+    labels_true = torch.ones(batch_size, 1, device=device)
+
+    # Mettre le label à 0 pour les sons vides (tous proches de zéro)
+    is_empty = (audio_state_true.abs().sum(dim=1) < 1e-5).unsqueeze(1)
+    labels_true[is_empty] = 0
+
+    # Fausses paires
+    idx = torch.randperm(batch_size, device=device)
+    for i in range(batch_size):
+        # Tant que la fausse paire (image, son permuté) existe déjà comme vraie paire, on re-permute cet indice
+        while torch.equal(audio_state[idx[i]], audio_state[i]):
+            idx[i] = torch.randint(0, batch_size, (1,), device=device)
+    audio_state_false = audio_state[idx]
+    ""noise_std = 0.05                                                                                          
+    audio_state_false = audio_state_false + torch.randn_like(audio_state_false) * noise_std""
+    #audio_state_false = torch.flip(audio_state_false, dims=[1])  # Inverse chaque signal
+    #audio_state_false = torch.roll(audio_state_false, shifts=10, dims=1)
+    audio_state_false = torch.ones_like(audio_state_false)
     visual_state_false = visual_state
     labels_false = torch.zeros(batch_size, 1, device=device)
 
@@ -93,24 +125,17 @@ def compute_discriminator_loss(discriminator, visual_state, action, audio_state,
     visual_state_batch = torch.cat([visual_state_true, visual_state_false], dim=0)
     audio_state_batch = torch.cat([audio_state_true, audio_state_false], dim=0)
     targets = torch.cat([labels_true, labels_false], dim=0)
-
-    # Mise en forme pour le discriminateur
-    if visual_state_batch.dim() > 2 and visual_state_batch.shape[1] == 32:
-        visual_state_batch = visual_state_batch.view(-1, *visual_state_batch.shape[2:])
-    if audio_state_batch.dim() > 2 and audio_state_batch.shape[1] == 32:
-        audio_state_batch = audio_state_batch.view(-1, *audio_state_batch.shape[2:])
-    if targets.dim() > 1 and targets.shape[1] == 1:
-        targets = targets.view(-1)
-
+    """
 
     inputs = {
-        'partial_obs': visual_state_batch,
-        'sound': audio_state_batch,
+        'partial_obs': visual_state,
+        'sound': combined_audio,
     }
-
-    # Passage dans le discriminateur des inputs
     outputs, _ = discriminator(inputs)
+
     preds = outputs['binary_class_output']
+    #targets = targets.view_as(preds)    
+    # Correction de la forme pour que preds et targets aient la même taille (typiquement [batch_size])
     if preds.dim() == 2 and preds.shape[1] != 1:
         preds = preds[:, 0]
     if preds.dim() > 1:
@@ -118,19 +143,8 @@ def compute_discriminator_loss(discriminator, visual_state, action, audio_state,
     if targets.dim() > 1:
         targets = targets.view(-1)
 
-
-    # Vérification de la cohérence des shapes
-    assert preds.shape == targets.shape, f"preds shape: {preds.shape}, targets shape: {targets.shape}"
     discrim_loss = F.binary_cross_entropy(preds, targets, reduction='none')
-    return discrim_loss, targets, preds, batch_size
-
-# Fonction pour vérifier si une paire (image, son) existe déjà avec un label différent dans le buffer
-def pair_exists_with_different_label(buffer, img, audio, label):
-    for tr in buffer:
-        if np.allclose(tr['partial_obs'], img) and np.allclose(tr['sound'], audio):
-            if tr['label'] != label:
-                return True
-    return False
+    return discrim_loss, targets, preds
 
 
 def learn(actor_model,
@@ -146,31 +160,39 @@ def learn(actor_model,
           flags,
           frames=None,
           lock=threading.Lock()):
-    """
-        Effectue une étape d'apprentissage :
-        - Calcule la récompense intrinsèque via le discriminateur
-        - Met à jour les réseaux (politique, embedding, etc...)
-        - Stocke les transitions dans le replay buffer
-        - Retourne les statistiques d'apprentissage
-    """
+    """Performs a learning (optimization) step."""
     with lock:
-        # Récupération des rewards de comptage (pour exploration basée sur la visite d'états)
-
         count_rewards = torch.ones((flags.unroll_length, flags.batch_size), 
             dtype=torch.float32).to(device=flags.device)
         count_rewards = batch['episode_state_count'][1:].float().to(device=flags.device)
+
+        """if flags.use_fullobs_intrinsic:
+            state_emb = state_embedding_model(batch, next_state=False)\
+                    .reshape(flags.unroll_length, flags.batch_size, 128)
+            next_state_emb = state_embedding_model(batch, next_state=True)\
+                    .reshape(flags.unroll_length, flags.batch_size, 128)
+        else:
+            inputs = {
+                'image': batch['partial_obs'].to(device=flags.device),
+                'sound': batch['sound'].to(device=flags.device),
+            }
+            state_emb = state_embedding_model(inputs)
+
+            #slice seulement sur les valeurs d'image et de son
+            next_state_emb = state_embedding_model({
+                'image': batch['partial_obs'][1:].to(device=flags.device),
+                'sound': batch['sound'][1:].to(device=flags.device),
+            })"""
 
         
         # Compute intrinsic reward from binary classifier output
         learner_outputs, unused_state = model(batch, initial_agent_state)
 
-        # Préparation des entrées pour le discriminateur
         visual_state = batch['partial_obs'].to(flags.device)
         action = batch['action'].to(flags.device)
         audio_state = batch['sound'].to(flags.device)
 
-        # Calcul de la loss du discriminateur et récupération des prédictions
-        discrim_loss_tensor, targets, preds, batch_size = compute_discriminator_loss(
+        discrim_loss_tensor, targets, preds = compute_discriminator_loss(
             model, visual_state, action, audio_state
         )
 
@@ -179,56 +201,34 @@ def learn(actor_model,
         
         rewards = batch['reward']
 
-        # Calcul de la récompense intrinsèque (sur les vraies paires uniquement)
-        # On utilise les prédictions du discriminateur pour calculer la récompense intrinsèque
-        # On ne garde que les prédictions des vraies paires (premier batch_size)
         with torch.no_grad():
             predicted_labels = (preds > 0.5).float()
             accuracy = (predicted_labels.cpu() == targets.cpu()).float().mean().item()
 
-            intrinsic_preds = preds[:batch_size]
-            intrinsic_rewards = -torch.log(intrinsic_preds)
-            intrinsic_rewards *= flags.intrinsic_reward_coef
+            intrinsic_rewards = -torch.log(preds)
+            intrinsic_rewards = intrinsic_rewards[:rewards.shape[0]]
+        
+        #intrinsic_rewards = reward
+        intrinsic_rewards *= flags.intrinsic_reward_coef
+        intrinsic_rewards = intrinsic_rewards[1:]
+        #intrinsic_rewards = 0
         bootstrap_value = learner_outputs['baseline'][-1]
 
-        # Découpe du batch RL (on enlève la première frame pour aligner avec les transitions)
         batch = {key: tensor[1:] for key, tensor in batch.items()}
-        rewards = batch['reward']
-        # Adapter à la découpe du batch RL (on enlève la première frame)
-        T, B = rewards.shape  # rewards est déjà batch['reward'][1:]
-        intrinsic_rewards = intrinsic_rewards.reshape(-1, B)[1:].reshape(-1)
 
-        if intrinsic_rewards.shape != rewards.shape:
-            # Si intrinsic_rewards est [T*B] et rewards est [T, B]
-            if intrinsic_rewards.numel() == rewards.numel():
-                intrinsic_rewards = intrinsic_rewards.view_as(rewards)
-            # Si intrinsic_rewards est [T] et rewards est [T, B]
-            elif intrinsic_rewards.shape[0] == rewards.shape[0] and rewards.dim() == 2:
-                intrinsic_rewards = intrinsic_rewards.unsqueeze(1).expand_as(rewards)
-            else:
-                raise RuntimeError(f"Shapes incompatibles: rewards {rewards.shape}, intrinsic_rewards {intrinsic_rewards.shape}")
-
-
-        # Ajout des transitions au replay buffer (en évitant les doublons contradictoires)
         for i in range(batch['reward'].shape[0]):
-            img = batch['partial_obs'][i].cpu().numpy().tolist()
-            audio = batch['sound'][i].cpu().numpy().tolist()
-            label = targets[i].item() if targets[i].numel() == 1 else targets[i].cpu().numpy().tolist()
             transition = {
-                'partial_obs': img,
-                'sound': audio,
+                'partial_obs': batch['partial_obs'][i].cpu().numpy().tolist(),
+                'sound': batch['sound'][i].cpu().numpy().tolist(),
                 'action': batch['action'][i].item() if batch['action'][i].numel() == 1 else batch['action'][i].cpu().numpy().tolist(),
                 'reward': batch['reward'][i].item() if batch['reward'][i].numel() == 1 else batch['reward'][i].cpu().numpy().tolist(),
                 'done': batch['done'][i].item() if batch['done'][i].numel() == 1 else batch['done'][i].cpu().numpy().tolist(),
                 'intrinsic_reward': intrinsic_rewards[i].item() if intrinsic_rewards[i].numel() == 1 else intrinsic_rewards[i].cpu().numpy().tolist(),
-                'label': label
-            }
-            if not pair_exists_with_different_label(replay_buffer, img, audio, label):
-                replay_buffer.append(transition)
+                'label': targets[i].item() if targets[i].numel() == 1 else targets[i].cpu().numpy().tolist()
 
-        # Préparation des sorties pour le calcul V-trace
-        # On enlève la dernière frame car elle n'a pas de récompense associée
-        # et on aligne avec les transitions du batch RL
+            }
+            replay_buffer.append(transition)
+
         learner_outputs = {
             key: tensor[:-1]
             for key, tensor in learner_outputs.items()
@@ -237,7 +237,6 @@ def learn(actor_model,
 
         count_rewards = count_rewards
         
-        # Calcul de la récompense totale (extrinsèque + intrinsèque)
         if flags.no_reward:
             total_rewards = intrinsic_rewards
         else:            
@@ -245,9 +244,7 @@ def learn(actor_model,
         
         discounts = (~batch['done']).float() * flags.discounting
 
-        # Calcul des retours V-trace pour la mise à jour de la politique
-        # On utilise les logits de la politique comportementale et de la politique cible
-        # pour calculer les avantages et les valeurs cibles
+
         vtrace_returns = vtrace.from_logits(
             behavior_policy_logits=batch['policy_logits'],
             target_policy_logits=learner_outputs['policy_logits'],
@@ -257,7 +254,6 @@ def learn(actor_model,
             values=learner_outputs['baseline'],
             bootstrap_value=bootstrap_value)
 
-        # Calcul des différentes losses
         pg_loss = losses.compute_policy_gradient_loss(learner_outputs['policy_logits'],
                                                batch['action'],
                                                vtrace_returns.pg_advantages)
@@ -287,7 +283,6 @@ def learn(actor_model,
         }
 
         
-        # Rétropropagation et mise à jour des poids
         optimizer.zero_grad()
         state_embedding_optimizer.zero_grad()
  
@@ -300,7 +295,6 @@ def learn(actor_model,
 
         scheduler.step()
 
-        # Synchronisation du modèle acteur
         actor_model.load_state_dict(model.state_dict())
         return stats
 

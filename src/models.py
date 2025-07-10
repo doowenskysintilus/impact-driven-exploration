@@ -291,11 +291,11 @@ class MinigridPolicyNetClassif(nn.Module):
             #LambdaLayer(normalize_input),
             nn.Identity(),
             init_(nn.Conv2d(in_channels=self.observation_shape[2], out_channels=32, kernel_size=(3, 3), stride=2, padding=1)),
-            nn.ELU(),
+            nn.ReLU(),
             init_(nn.Conv2d(in_channels=32, out_channels=32, kernel_size=(3, 3), stride=2, padding=1)),
-            nn.ELU(),
+            nn.ReLU(),
             init_(nn.Conv2d(in_channels=32, out_channels=32, kernel_size=(3, 3), stride=2, padding=1)),
-            nn.ELU(),
+            nn.ReLU(),
         )
 
         # Sound
@@ -306,14 +306,6 @@ class MinigridPolicyNetClassif(nn.Module):
         )
 
         # Main fully connected layers
-        """self.fc = nn.Sequential(
-            init_(nn.Linear(40, 1024)),
-            nn.ReLU(),
-            init_(nn.Linear(1024, 1024)),
-            nn.ReLU(),
-            init_(nn.Linear(1024, 1024)),
-            nn.ReLU()
-        )"""
         self.fc = nn.Sequential(
             init_(nn.Linear(32*1*1 + 8, 1024)),
             #nn.LayerNorm(1024),
@@ -330,12 +322,6 @@ class MinigridPolicyNetClassif(nn.Module):
         self.baseline = init_(nn.Linear(1024, 1))
 
         # Binary classifier
-        """self.binary_classifier = nn.Sequential(
-            init_(nn.Linear(1024, 128)),
-            nn.ReLU(),
-            init_(nn.Linear(128, 1)),
-            nn.Sigmoid()
-        )"""
         self.binary_classifier = nn.Sequential(
             init_(nn.Linear(1024, 128)),
             nn.LayerNorm(128),
@@ -355,7 +341,7 @@ class MinigridPolicyNetClassif(nn.Module):
     def initial_state(self, batch_size):
         return (torch.zeros(1, batch_size, 1),)
     
-    def forward(self, inputs, core_state=()):
+    """ forward(self, inputs, core_state=()):
         # Traitement de l'image
         if 'image' in inputs:
             x = inputs['image']
@@ -367,7 +353,7 @@ class MinigridPolicyNetClassif(nn.Module):
         T, B, H, W, C = x.shape
         
         x = x.view(T * B, H, W, C).permute(0, 3, 1, 2)  # [T*B, C, H, W]
-        x = x.float() #/ 255.0  # Normalization if needed
+        x = x.float() #/ 255.0  #Normalization
         x = self.feat_extract(x)
         x = x.view(T * B, -1)
 
@@ -391,6 +377,67 @@ class MinigridPolicyNetClassif(nn.Module):
             policy_logits=policy_logits,
             baseline=baseline,
             action=action.view(T, B),
+            binary_class_output=binary_output
+        ), core_state"""
+    def forward(self, inputs, core_state=()):
+        # Traitement de l'image
+        if 'image' in inputs:
+            x = inputs['image']
+        elif 'partial_obs' in inputs:
+            x = inputs['partial_obs']
+        else:
+            raise KeyError("inputs must contain 'image' or 'partial_obs'.")
+
+        # Gère les batchs 4D ([N, H, W, C]) ou 5D ([T, B, H, W, C])
+        if x.dim() == 5:
+            T, B, H, W, C = x.shape
+            x = x.view(T * B, H, W, C)
+            batch_shape = (T, B)
+        elif x.dim() == 4:
+            N, H, W, C = x.shape
+            x = x.view(N, H, W, C)
+            batch_shape = (N,)
+        else:
+            raise ValueError(f"Unexpected input shape: {x.shape}")
+
+        x = x.permute(0, 3, 1, 2)  # [batch, C, H, W]
+        x = x.float()
+        x = self.feat_extract(x)
+        x = x.view(x.shape[0], -1)
+
+        # Traitement du son
+        x_sound = inputs['sound']
+        if x_sound.dim() == 3:
+            x_sound = x_sound.view(-1, x_sound.shape[-1])
+        x_sound = x_sound.float()
+        x_sound = self.sound_mlp(x_sound)
+
+        # Fusion
+        x = torch.cat([x, x_sound], dim=1)
+        x = self.fc(x)
+
+        # Sorties
+        if len(batch_shape) == 2:
+            T, B = batch_shape
+            policy_logits = self.policy(x).view(T, B, -1)
+            baseline = self.baseline(x).view(T, B)
+            binary_output = self.binary_classifier(x).view(T, B)
+            action = torch.multinomial(F.softmax(policy_logits.view(-1, self.num_actions), dim=1), 1) if self.training \
+                else torch.argmax(policy_logits, dim=2)
+            action = action.view(T, B)
+        else:
+            N = batch_shape[0]
+            policy_logits = self.policy(x).view(N, -1)
+            baseline = self.baseline(x).view(N)
+            binary_output = self.binary_classifier(x).view(N)
+            action = torch.multinomial(F.softmax(policy_logits, dim=1), 1) if self.training \
+                else torch.argmax(policy_logits, dim=1)
+            action = action.view(N)
+
+        return dict(
+            policy_logits=policy_logits,
+            baseline=baseline,
+            action=action,
             binary_class_output=binary_output
         ), core_state
     

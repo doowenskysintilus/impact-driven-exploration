@@ -1,21 +1,13 @@
 import json
 import torch
 import numpy as np
-import torch
-import gymnasium as gym
-#from src.models import MinigridPolicyNetClassif as models
-#from src.models import MinigridPolicyNetClassif
-#MinigridPolicyNetClassif = models.MinigridPolicyNetClassif
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-import torch
 import gymnasium as gym
 from src.models import MinigridPolicyNetClassif
 from minigrid.envs.multiroom_sound import MultiRoomEnvSound
 import matplotlib.pyplot as plt
 import torch.nn.functional as F
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 env = gym.make("MiniGrid-MultiRoomEnvSound-N2-S4-v0")
